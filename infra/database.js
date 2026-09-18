@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import { Client } from "pg";
 
 async function query(queryObject) {
@@ -9,26 +7,9 @@ async function query(queryObject) {
     user: process.env.POSTGRES_USER,
     database: process.env.POSTGRES_DB,
     password: process.env.POSTGRES_PASSWORD,
-    ssl:
-      process.env.NODE_ENV === "development"
-        ? false
-        : {
-            rejectUnauthorized: true,
-            ca: fs
-              .readFileSync(
-                path.join(process.cwd(), "infra", "certs", "prod-ca-2021.crt"),
-              )
-              .toString(),
-          },
+    ssl: getSSLValues(),
   });
-  console.log("Credentials:", {
-    host: process.env.POSTGRES_HOST,
-    port: process.env.POSTGRES_PORT,
-    user: process.env.POSTGRES_USER,
-    database: process.env.POSTGRES_DB,
-    password: process.env.POSTGRES_PASSWORD,
-    ssl: process.env.NODE_ENV === "development" ? false : "enabled",
-  });
+
   try {
     await client.connect();
     const result = await client.query(queryObject);
@@ -44,3 +25,20 @@ async function query(queryObject) {
 export default {
   query: query,
 };
+
+function getSSLValues() {
+  if (process.env.POSTGRES_CA) {
+    return {
+      rejectUnauthorized: true,
+      ca: process.env.POSTGRES_CA,
+    };
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    return false;
+  }
+
+  throw new Error(
+    "POSTGRES_CA is not defined. Required in production for SSL.",
+  );
+}
