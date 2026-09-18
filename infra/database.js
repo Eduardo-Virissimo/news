@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { Client } from "pg";
 
 async function query(queryObject) {
@@ -7,6 +9,17 @@ async function query(queryObject) {
     user: process.env.POSTGRES_USER,
     database: process.env.POSTGRES_DB,
     password: process.env.POSTGRES_PASSWORD,
+    ssl:
+      process.env.NODE_ENV === "development"
+        ? false
+        : {
+            rejectUnauthorized: true,
+            ca: fs
+              .readFileSync(
+                path.join(process.cwd(), "infra", "certs", "prod-ca-2021.crt"),
+              )
+              .toString(),
+          },
   });
   console.log("Credentials:", {
     host: process.env.POSTGRES_HOST,
@@ -14,6 +27,7 @@ async function query(queryObject) {
     user: process.env.POSTGRES_USER,
     database: process.env.POSTGRES_DB,
     password: process.env.POSTGRES_PASSWORD,
+    ssl: process.env.NODE_ENV === "development" ? false : "enabled",
   });
   try {
     await client.connect();
